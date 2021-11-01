@@ -91,17 +91,6 @@ def main(project_id, output_folder, workflow_name, run_name, panel, instrument, 
                                  folder="%s/%s" % (output_folder, run_name),
                                  )
         print(fastqs_list)
-        wfw.fastqtrimmer(wf, fastqs_list)
-        wfw.novoalign_and_sort(wf)
-        wfw.markedduplicates(wf,remove_duplicate_reads)
-        wfw.BAMPostProcess(wf)
-        wfw.collectmultiplemetrics(wf, target_interval_list, bait_interval_list)
-        wfw.variant_discovery(wf, target_interval_list)
-        wfw.variant_discovery_bp_resolution(wf, target_interval_list_bp_resolution)
-        wfw.adjusted_base_count_analysis(wf, target_interval_list)
-        wfw.add_abc_to_vcf(wf)
-        wfw.custom_caller(wf)
-        wfw.vcf_annotate2(wf, instrument)
         #wfw.qci_link_sql_dx(wf)
         #wfw.evm(wf, instrument)
 
