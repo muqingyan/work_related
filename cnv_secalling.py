@@ -79,49 +79,6 @@ def pertargetcv_zscore_recal(df_dq_recal_back):
     df_dq_convert= df_dq_recal_back.copy()
 #calculate zscore per target
     for col in cols:
-        # col_zscore = col + '_zscore'
-        df_z[col] = (df_dq_recal_back[col] - df_dq_recal_back[col].mean(skipna=True)) / df_dq_recal_back[col].std(ddof=0, skipna=True)
-    print("df_z with zscores",df_z.head())
-    df_z_convert = pd.DataFrame(index=df_z.index)
-    for col in cols:
-        # col_zscore = col + '_zscore'
-        # col_zcnv = col +'_zcnv'
-        conditions = [df_z[col] <= -3, df_z[col] >= 3,(df_z[col]>-3) & (df_z[col] <3)]
-        choices = ["deletion", 'duplication','normal']
-        df_z_convert[col] = np.select(conditions,choices,default=np.nan)
-    print("df_z_convert with zcnv", df_z_convert.head())
-    #calculate dq cv per target
-    for col in cols:
-        # col_dq = col+"_dqscore"
-        conditions = [df_dq_recal_back[col] <= 0.65, df_dq_recal_back[col] >= 1.4, (df_dq_recal_back[col] > 0.65) & (df_dq_recal_back[col] < 1.4)]
-        choices = ["deletion", 'duplication','normal']
-        df_dq_convert[col] = np.select(conditions,choices,default=np.nan)
-    print("df_dq_convert with dqcnv", df_dq_convert.head())
-    df_dq_recal_back.reset_index(level=0, inplace=True)
-    df_z.reset_index(level=0,inplace=True)
-    df_z_convert.reset_index(level=0,inplace=True)
-    df_dq_convert.reset_index(level=0,inplace=True)
-
-    df_dq_filterCV2= pd.melt(df_dq_recal_back, id_vars=['Sample'], var_name='target', value_name='dq')
-    df_dq_convert2=pd.melt(df_dq_convert,id_vars=['Sample'],var_name='target',value_name='dqCNV')
-    df_z2=pd.melt(df_z,id_vars=['Sample'],var_name='target',value_name='zscore')
-    df_z_convert2=pd.melt(df_z_convert,id_vars=['Sample'],var_name='target',value_name='zCNV')
-    print(df_dq_filterCV2,df_dq_convert2,df_z2,df_z_convert2)
-    df_z_res=pd.merge(df_z2,df_z_convert2,on=['Sample','target'])
-    df_dq_res = pd.merge(df_dq_filterCV2,df_dq_convert2,on=['Sample','target'])
-    df_z_dq = pd.merge(df_z_res,df_dq_res,on=['Sample','target'])
-    df_cv_merge = df_z_dq.merge(df_cv_filter,on=['target'])
-
-    print("Before consensus",df_cv_merge)
-    df_cv_merge['consensus_CNV'] = df_cv_merge.apply(initcnv.consensus_z_dq,axis=1)
-    df_cv_merge[['gene','exon']] = df_cv_merge.target.str.split(':exon_',expand=True)
-    df_cv_merge['exon'] = df_cv_merge['exon'].astype(float)
-    # print(set(df_z_dq['exon'].values.tolist()))
-    df_cv_merge_sort=df_cv_merge.sort_values(["gene","exon"],ascending=(True,True))
-    print("After consensus and sorting",df_cv_merge_sort)
-    df_cv_merge_sort.to_csv("sort_recal_targetcv0.18.csv")
-    return df_cv_merge_sort
-
 def secalling(df_cv_merge_sort):
     df_consensus_nonnormal = df_cv_merge_sort[df_cv_merge_sort['consensus_CNV'] != 'normal']
     df_normal = df_cv_merge_sort[df_cv_merge_sort['consensus_CNV'] == 'normal']
@@ -143,26 +100,3 @@ def secalling(df_cv_merge_sort):
         #     print(df_normal[(df_normal['Sample'] == 14076402) & (df_normal['gene'] == 'FANCD2') ])
         sample = g[0]
         gene = g[1]
-        if len(df) == 1:  # one positive target per sample
-            l, h, lb, ub = recal_SE(df_normal, sample, gene)
-            df['adj_cnv_type'] = df.apply(assign_se_type, args=(l, h, lb, ub), axis=1)
-            df_se_mark = df_se_mark.append(df, ignore_index=True)
-        else:
-            # print(g,df)
-            exons_num = df['exon']
-            # print(exons_num)
-            exon_cl = tell_se_me(exons_num)
-            # print(exon_cl)
-            for i, row in df.iterrows():
-                for e in exon_cl:
-                    if row['exon'] in e:
-                        if len(e) == 1:
-                            row['adj_cnv_type'] = assign_se_type(row, l, h, lb, ub)
-                        else:
-                            row['adj_cnv_type'] = 'ME'
-                        break
-                df_se_mark = df_se_mark.append(row, ignore_index=True)
-    print(df_se_mark)
-    df_se_mark.to_csv("se_marked.csv")
-
-    return df_se_mark, df_normal
