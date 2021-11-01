@@ -1,0 +1,72 @@
+#FROM bioconductor/bioconductor_docker:devel
+FROM rocker/r-ver:4.0.3
+
+# Update the underlying Ubuntu OS, and install snakemake
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends build-essential libpq-dev python3.4 python3-pip python3-setuptools python3-dev
+
+
+RUN apt-get install -y git wget gcc openjdk-8-jre-headless make build-essential libssl-dev libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev libcurl4-gnutls-dev liblzma-dev libxml2 libx11-dev libcairo2-dev xvfb xauth xfonts-base xorg-dev libpango1.0-dev libxml2-dev libmariadb-dev cmake libfreetype6-dev pkg-config zlib1g-dev libtool tree vim
+
+RUN pip3 install --upgrade pip
+
+#ENV PYTHONPATH "${PYTHONPATH}:/app"
+
+RUN pip3 install idna==2.5
+
+RUN pip3 install snakemake==3.12.0 pysam==0.16.0.1 pyyaml==3.12 && \ 
+#	pip install --upgrade pip &&  \
+	pip install -Iv matplotlib==2.2.3 && \
+	pip install multiqc==1.7 
+#RUN pip3 install snakemake==3.12.0 \
+#	pip3 install pysam==0.15.0 \
+#	pip3 install pyyaml==3.12 \
+#	pip install --upgrade pip \
+#	pip install -Iv matplotlib==2.2.3 \
+#	pip install multiqc==1.7 
+
+
+RUN wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 && \
+	tar -vxjf samtools-1.9.tar.bz2 && \
+	make -C samtools-1.9/ &&\
+	make -C samtools-1.9/ install
+
+RUN wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 &&\
+	tar -vxjf bcftools-1.9.tar.bz2  &&\
+	make -C bcftools-1.9/ &&\
+	make -C bcftools-1.9/ install
+RUN wget https://github.com/shahcompbio/hmmcopy_utils/archive/master.zip &&\
+	unzip master.zip &&\
+	ls &&\
+	cd hmmcopy_utils-master/ &&\
+        cmake . && \
+        make && \
+        cp bin/* /usr/local/bin/
+# Install ggplot2 and yaml libraries into R
+RUN git clone --depth=1 https://stash.natera.com/scm/~myan/titan_resources.git
+
+RUN R -e "install.packages(c('lazyeval','crosstalk','DT','rex','covr'),repos='http://cran.rstudio.com/'); install.packages(c('devtools', 'optparse', 'stringr'), repos='http://cran.rstudio.com/');install.packages('BiocManager', repos='http://cran.rstudio.com/'); BiocManager::install(c('HMMcopy','S4Vectors','GenomeInfoDb','XVector','GenomicRanges','Biostrings','Rsamtools','TitanCNA'));library(devtools); install_github('broadinstitute/ichorCNA')"
+
+RUN R -e "BiocManager::install('BSgenome.Hsapiens.UCSC.hg19')"
+#RUN wget https://cran.r-project.org/bin/macosx/el-capitan/contrib/3.5/doMC_1.3.6.tgz && R CMD INSTALL doMC_1.3.6.tgz
+
+RUN R -e "install.packages('doMC')"
+#RUN R -e "library(BiocManager);BiocManager::install('oligoClasses')"
+RUN R -e "library(devtools);install_github('rscharpf/SNPchip')"
+RUN cp /titan_resources/resourceRcode/ichorCNA_scripts/* /usr/local/lib/R/site-library/ichorCNA/R/
+RUN cp /titan_resources/resourceRcode/titanCNA_scripts/* /usr/local/lib/R/site-library/TitanCNA/R/
+# Set the working directory for the project to /app
+#WORKDIR /app
+
+# Copy everything from our terminal's current directory (the first dot)
+# into the working directory, /app (the second dot)
+#COPY . .
+
+#RUN mkdir -p /usr/local/lib/R/site-library/ichorCNA/R/ && mkdir -p /usr/loical/lib/R/site-library/TitanCNA/R/
+#RUN R -e 'BiocManager::install(c("TitanCNA","HMMcopy","SNPchip"))' && RUN R -e 'remotes::install_github("broadinstitute/ichorCNA")'
+WORKDIR /
+# By default, the r-base Docker image will run the terminal command "R".
+# We want to overwrite that, so it runs snakemake instead.
+#ENTRYPOINT [ "snakemake" ]
+#ENTRYPOINT [ "bash" ]
+
